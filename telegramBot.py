@@ -61,7 +61,7 @@ def user_main_menu(message):
         bot.send_message(message.chat.id, config.message_library["unknown_command"])
 
 
-@bot.message_handler(func=lambda message: db.get_current_state(message.chat.id) ==
+@bot.message_handler(content_types=["text", "location"], func=lambda message: db.get_current_state(message.chat.id) ==
                                           config.States.S_GEO_LOCATION_TYPE.value)
 def user_geo_location_type(message):
     if message.content_type == 'text' or message.content_type == 'location':
