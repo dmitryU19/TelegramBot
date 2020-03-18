@@ -159,12 +159,14 @@ def callback_network_type(call):
 
 def save_user_common_info(user_id):
     try:
-        with open("answers.txt", 'w') as file_handler:
+        with open("answers.txt", 'a') as file_handler:
             file_handler.write('userId={0}: '.format(user_id))
             for step in config.States:
                 answer = db.get_user_answer(user_id, step.value)
                 if answer != 'no_answer':
                     file_handler.write('{0}={1} '.format(step.name, answer))
+
+            file_handler.write('\n')
     except IOError:
         print("An IOError has occurred!")
     finally:
