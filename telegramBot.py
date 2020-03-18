@@ -56,6 +56,7 @@ def user_search(message):
 def user_main_menu(message):
     if message.text.isdigit() and message.text == '1':
         db.set_state(message.chat.id, config.States.S_GEO_LOCATION_TYPE.value)
+        db.save_user_answer(message.chat.id, config.States.S_MAIN_MENU.value, '1')
         bot.send_message(message.chat.id, config.message_library["geo_location_type"])
     else:
         bot.send_message(message.chat.id, config.message_library["unknown_command"])
@@ -66,6 +67,7 @@ def user_main_menu(message):
 def user_geo_location_type(message):
     if message.content_type == 'text' or message.content_type == 'location':
         db.set_state(message.chat.id, config.States.S_TROUBLE_LOCATION_ANSWER.value)
+        db.save_user_answer(message.chat.id, config.States.S_GEO_LOCATION_TYPE.value, message.text)
         keyboard = types.InlineKeyboardMarkup()
         key_outdoor = types.InlineKeyboardButton(text='На вулиці', callback_data='outdoor')
         keyboard.add(key_outdoor)
@@ -82,9 +84,11 @@ def user_geo_location_type(message):
 def callback_location(call):
     if call.data == "outdoor":
         db.set_state(call.message.chat.id, config.States.S_TROUBLE_TYPE.value)
+        db.save_user_answer(call.message.chat.id, config.States.S_TROUBLE_LOCATION_ANSWER.value, 'outdoor')
         trouble_type(call.message)
     elif call.data == "indoor":
         db.set_state(call.message.chat.id, config.States.S_TROUBLE_LOCATION_INDOOR.value)
+        db.save_user_answer(call.message.chat.id, config.States.S_TROUBLE_LOCATION_ANSWER.value, 'indoor')
         bot.send_message(call.message.chat.id, config.message_library["location_floor"])
 
 
@@ -93,6 +97,7 @@ def callback_location(call):
 def user_location_floor(message):
     if message.text.isdigit():
         db.set_state(message.chat.id, config.States.S_TROUBLE_TYPE.value)
+        db.save_user_answer(message.chat.id, config.States.S_TROUBLE_LOCATION_INDOOR.value, message.text)
         trouble_type(message)
     else:
         bot.send_message(message.chat.id, config.message_library["unknown_floor"])
@@ -114,6 +119,7 @@ def trouble_type(message):
 def callback_trouble_type(call):
     if call.data == "voice":
         db.set_state(call.message.chat.id, config.States.S_NETWORK_TYPE.value)
+        db.save_user_answer(call.message.chat.id, config.States.S_TROUBLE_TYPE_ANSWER.value, 'voice')
         keyboard = types.InlineKeyboardMarkup()
         key_2g = types.InlineKeyboardButton(text='2G', callback_data='2g')
         keyboard.add(key_2g)
@@ -125,6 +131,7 @@ def callback_trouble_type(call):
                          text=config.message_library["network_type"], reply_markup=keyboard)
     elif call.data == "data":
         db.set_state(call.message.chat.id, config.States.S_NETWORK_TYPE.value)
+        db.save_user_answer(call.message.chat.id, config.States.S_TROUBLE_TYPE_ANSWER.value, 'data')
         keyboard = types.InlineKeyboardMarkup()
         key_2g = types.InlineKeyboardButton(text='2G', callback_data='2g')
         keyboard.add(key_2g)
@@ -143,7 +150,25 @@ def callback_trouble_type(call):
 def callback_network_type(call):
     if call.data == "2g" or call.data == "3g" or call.data == "4g" or call.data == "skip":
         db.set_state(call.message.chat.id, config.States.S_TICKET_NUMBER.value)
-        bot.send_message(call.message.chat.id, config.message_library["ticket_number"] % str(randrange(100, 200)))
+        db.save_user_answer(call.message.chat.id, config.States.S_NETWORK_TYPE.value, call.data)
+        save_user_common_info(call.message.chat.id)
+        ticket_number = str(randrange(100, 200))
+        bot.send_message(call.message.chat.id, config.message_library["ticket_number"] % ticket_number)
+        db.save_user_answer(call.message.chat.id, config.States.S_TICKET_NUMBER.value, ticket_number)
+
+
+def save_user_common_info(user_id):
+    try:
+        with open("answers.txt", 'w') as file_handler:
+            file_handler.write('userId={0}: '.format(user_id))
+            for step in config.States:
+                answer = db.get_user_answer(user_id, step.value)
+                if answer != 'no_answer':
+                    file_handler.write('{0}={1} '.format(step.name, answer))
+    except IOError:
+        print("An IOError has occurred!")
+    finally:
+        file_handler.close()
 
 
 bot.polling()
